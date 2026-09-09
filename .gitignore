@@ -1,0 +1,52 @@
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+*.pyd
+*.so
+
+# Entornos virtuales
+.venv/
+venv/
+env/
+
+# =========================
+# Variables y credenciales
+# =========================
+.env
+.env.*
+!.env.example
+
+# =========================
+# IDE
+# =========================
+.vscode/
+.idea/
+
+# =========================
+# Sistema operativo
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# Datos geoespaciales pesados
+# =========================
+*.tif
+*.tiff
+
+# =========================
+# Archivos temporales
+# =========================
+*.tmp
+*.log
+.cache/
+.pytest_cache/
+
+# =========================
+# Resultados temporales de análisis
+# =========================
+outputs/
+uploads/
+temp/
