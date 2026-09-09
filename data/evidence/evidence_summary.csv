@@ -1,0 +1,28 @@
+recorte,hydrothermal_robust,structural_robust,convergence_hf,evidence_class
+IZA-1,false,false,false,Sin convergencia robusta
+IZA-10,false,false,false,Sin convergencia robusta
+IZA-12,false,false,false,Sin convergencia robusta
+IZA-13,false,false,false,Sin convergencia robusta
+IZA-14,false,false,false,Sin convergencia robusta
+IZA-15,false,true,false,Evidencia estructural robusta
+IZA-4,false,false,false,Sin convergencia robusta
+IZA-5,false,false,false,Sin convergencia robusta
+IZA-6,false,false,false,Sin convergencia robusta
+IZA-7,true,false,false,Evidencia hidrotermal robusta
+IZA-8-1,false,false,false,Sin convergencia robusta
+IZA-9,false,true,false,Evidencia estructural robusta
+PAIPA-1,false,false,false,Sin convergencia robusta
+PAIPA-10,true,true,true,Convergencia robusta H + F
+PAIPA-11,true,false,false,Evidencia hidrotermal robusta
+PAIPA-12,false,true,false,Evidencia estructural robusta
+PAIPA-13,false,false,false,Sin convergencia robusta
+PAIPA-14,true,false,false,Evidencia hidrotermal robusta
+PAIPA-15,false,false,false,Sin convergencia robusta
+PAIPA-16,true,true,true,Convergencia robusta H + F
+PAIPA-17,false,false,false,Sin convergencia robusta
+PAIPA-18,false,false,false,Sin convergencia robusta
+PAIPA-3,false,true,false,Evidencia estructural robusta
+PAIPA-5,true,false,false,Evidencia hidrotermal robusta
+PAIPA-6-1,false,false,false,Sin convergencia robusta
+PAIPA-6-2,false,true,false,Evidencia estructural robusta
+PAIPA-8,false,false,false,Sin convergencia robusta

@@ -1,7 +1,7 @@
 from pathlib import Path
 from shapely.geometry import Point
 import geopandas as gpd
-
+from backend.services.evidence_service import load_evidence
 
 CANDIDATES_PATH = Path(
     "/app/data/candidate_zones/candidate_zones.gpkg"
@@ -171,4 +171,177 @@ def find_candidates_by_point(lat: float, lon: float):
         "intersects_candidate": True,
         "total_matches": len(candidates),
         "candidates": candidates
+    }
+
+def get_candidates_geojson(evidence_filter: str = "all"):
+    """
+    Retorna las zonas candidatas como GeoJSON, opcionalmente
+    filtradas según la evidencia independiente del recorte.
+
+    Filtros:
+        all         -> todos los candidatos
+        hydrothermal -> recortes con evidencia H robusta
+        structural   -> recortes con evidencia F robusta
+        convergence  -> recortes con convergencia H + F
+    """
+
+    candidates = load_candidates()
+    evidence = load_evidence()
+
+    # --------------------------------------------------------
+    # Incorporar evidencia a cada candidato
+    # --------------------------------------------------------
+
+    candidates = candidates.merge(
+        evidence[
+            [
+                "recorte",
+                "hydrothermal_robust",
+                "structural_robust",
+                "convergence_hf",
+                "evidence_class",
+            ]
+        ],
+        on="recorte",
+        how="left",
+        validate="many_to_one",
+    )
+
+    # Comprobar que todos encontraron evidencia
+    if candidates["evidence_class"].isna().any():
+
+        missing = (
+            candidates.loc[
+                candidates["evidence_class"].isna(),
+                "recorte"
+            ]
+            .unique()
+            .tolist()
+        )
+
+        raise ValueError(
+            f"Existen candidatos sin clasificación "
+            f"de evidencia: {missing}"
+        )
+
+    # --------------------------------------------------------
+    # Aplicar filtro
+    # --------------------------------------------------------
+
+    if evidence_filter == "hydrothermal":
+
+        candidates = candidates[
+            candidates["hydrothermal_robust"]
+        ]
+
+    elif evidence_filter == "structural":
+
+        candidates = candidates[
+            candidates["structural_robust"]
+        ]
+
+    elif evidence_filter == "convergence":
+
+        candidates = candidates[
+            candidates["convergence_hf"]
+        ]
+
+    elif evidence_filter != "all":
+
+        raise ValueError(
+            "Filtro no válido. Use: all, hydrothermal, "
+            "structural o convergence."
+        )
+
+    # --------------------------------------------------------
+    # Transformación para mapa web
+    # --------------------------------------------------------
+
+    candidates = candidates.to_crs("EPSG:4326")
+
+    # Solo enviamos lo necesario al navegador
+    candidates = candidates[
+        [
+            "candidate_id",
+            "zone_id",
+            "recorte",
+            "area_m2",
+            "score_mean",
+            "score_max",
+            "has_strict_core",
+            "hydrothermal_robust",
+            "structural_robust",
+            "convergence_hf",
+            "evidence_class",
+            "geometry",
+        ]
+    ].copy()
+
+    return candidates.__geo_interface__
+
+def get_candidates_filter_summary(evidence_filter: str = "all"):
+    """
+    Valida cuántos candidatos quedan después de aplicar
+    un filtro de evidencia y en qué recortes se encuentran.
+    """
+
+    candidates = load_candidates()
+    evidence = load_evidence()
+
+    candidates = candidates.merge(
+        evidence[
+            [
+                "recorte",
+                "hydrothermal_robust",
+                "structural_robust",
+                "convergence_hf",
+                "evidence_class",
+            ]
+        ],
+        on="recorte",
+        how="left",
+        validate="many_to_one",
+    )
+
+    if candidates["evidence_class"].isna().any():
+        raise ValueError(
+            "Existen candidatos sin clasificación de evidencia."
+        )
+
+    if evidence_filter == "hydrothermal":
+        candidates = candidates[
+            candidates["hydrothermal_robust"]
+        ]
+
+    elif evidence_filter == "structural":
+        candidates = candidates[
+            candidates["structural_robust"]
+        ]
+
+    elif evidence_filter == "convergence":
+        candidates = candidates[
+            candidates["convergence_hf"]
+        ]
+
+    elif evidence_filter != "all":
+        raise ValueError(
+            "Filtro no válido. Use: all, hydrothermal, "
+            "structural o convergence."
+        )
+
+    counts = (
+        candidates["recorte"]
+        .value_counts()
+        .sort_index()
+        .to_dict()
+    )
+
+    return {
+        "filter": evidence_filter,
+        "total_candidates": len(candidates),
+        "total_recortes": int(candidates["recorte"].nunique()),
+        "recortes": sorted(
+            candidates["recorte"].unique().tolist()
+        ),
+        "candidates_by_recorte": counts,
     }

@@ -28,6 +28,53 @@ st.subheader(
     "para exploración geotérmica"
 )
 
+st.sidebar.header("Capas de análisis")
+
+mostrar_candidatos = st.sidebar.checkbox(
+    "Mostrar zonas candidatas",
+    value=False
+)
+
+filtro_evidencia = st.sidebar.radio(
+    "Filtro de evidencia",
+    options=[
+        "Todas",
+        "Hidrotermal robusta",
+        "Estructural robusta",
+        "Convergencia H + F",
+    ],
+    index=3,
+)
+
+filtros_api = {
+    "Todas": "all",
+    "Hidrotermal robusta": "hydrothermal",
+    "Estructural robusta": "structural",
+    "Convergencia H + F": "convergence",
+}
+descripcion_filtros = {
+    "Todas": (
+        "Muestra todas las zonas candidatas de anomalía espectral "
+        "identificadas mediante Isolation Forest."
+    ),
+    "Hidrotermal robusta": (
+        "Muestra zonas candidatas pertenecientes a recortes con "
+        "evidencia hidrotermal robusta."
+    ),
+    "Estructural robusta": (
+        "Muestra zonas candidatas pertenecientes a recortes con "
+        "evidencia estructural robusta."
+    ),
+    "Convergencia H + F": (
+        "Muestra zonas candidatas pertenecientes a recortes con "
+        "convergencia robusta de evidencia hidrotermal y estructural. "
+        "En este estudio corresponde a PAIPA-10 y PAIPA-16."
+    ),
+}
+
+st.sidebar.caption(
+    descripcion_filtros[filtro_evidencia]
+)
 st.write(
     "Exploración interactiva de los resultados geoespaciales "
     "obtenidos para la zona Paipa–Iza."
@@ -104,11 +151,112 @@ folium.GeoJson(
     ),
 ).add_to(mapa)
 
+if mostrar_candidatos:
 
+    try:
+        candidate_map_response = requests.get(
+            f"{API_URL}/api/candidates",
+            params={
+                "evidence": filtros_api[filtro_evidencia]
+            },
+            timeout=30
+        )
+
+        candidate_map_response.raise_for_status()
+        candidate_geojson = candidate_map_response.json()
+        def estilo_candidato(feature):
+            properties = feature["properties"]
+            if properties["convergence_hf"]:
+                color = "#8B0000"       # Convergencia H + F
+            elif properties["hydrothermal_robust"]:
+                color = "#E67E22"       # Evidencia hidrotermal
+            elif properties["structural_robust"]:
+                color = "#6C3483"       # Evidencia estructural
+            else:
+                color = "#2471A3"       # Candidato espectral
+            return {
+                "color": color,
+                "fillColor": color,
+                "fillOpacity": 0.65,
+                "weight": 1,
+                "opacity": 0.9,
+            }
+
+
+
+        folium.GeoJson(
+            candidate_geojson,
+            name=f"Zonas candidatas — {filtro_evidencia}",
+            style_function=estilo_candidato,
+            highlight_function=lambda feature: {
+                "fillOpacity": 0.9,
+                "weight": 3,
+            },
+
+            tooltip=folium.GeoJsonTooltip(
+                fields=[
+                   "candidate_id",
+                   "recorte",
+                   "score_mean",
+                   "area_m2",
+                   "evidence_class",
+                ],
+                aliases=[
+                    "Candidato:",
+                    "Recorte:",
+                    "Score medio:",
+                    "Área (m²):",
+                    "Evidencia del recorte:",
+                ],
+                localize=True,
+                sticky=True,
+
+
+            ),
+
+        ).add_to(mapa)
+
+    except requests.RequestException as error:
+        st.error(
+            "No fue posible cargar las zonas candidatas."
+        )
+        st.exception(error)
 # ============================================================
 # CONTROL DE CAPAS
 # ============================================================
 
+leyenda_html = """
+<div style="
+    position: fixed;
+    bottom: 40px;
+    left: 40px;
+    width: 245px;
+    background-color: white;
+    border: 2px solid grey;
+    z-index: 9999;
+    font-size: 14px;
+    padding: 10px;
+    border-radius: 6px;
+">
+    <b>Nivel de evidencia</b><br><br>
+
+    <span style="color:#2471A3;">■</span>
+    Anomalía espectral<br>
+
+    <span style="color:#E67E22;">■</span>
+    Evidencia hidrotermal robusta<br>
+
+    <span style="color:#6C3483;">■</span>
+    Evidencia estructural robusta<br>
+
+    <span style="color:#8B0000;">■</span>
+    Convergencia robusta H + F<br>
+</div>
+"""
+
+mapa.get_root().html.add_child(
+    folium.Element(leyenda_html)
+)
 folium.LayerControl().add_to(mapa)
 
 

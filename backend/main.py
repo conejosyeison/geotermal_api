@@ -5,7 +5,13 @@ from backend.services.spatial_service import (get_footprints_summary,get_footpri
 from backend.services.candidate_service import (
     get_candidates_summary,
     find_candidates_by_point,
+    get_candidates_geojson,
+    get_candidates_filter_summary,
 )
+from backend.services.evidence_service import (
+    get_evidence_summary,
+)
+
 app = FastAPI(
     title="Geotermal API",
     description="API para el sistema de apoyo a la priorización de anomalías superficiales para exploración geotérmica",
@@ -44,3 +50,15 @@ def candidates_status():
 @app.get("/api/candidates/query")
 def query_candidate(lat: float, lon: float):
     return find_candidates_by_point(lat, lon)
+
+@app.get("/api/evidence/status")
+def evidence_status():
+    return get_evidence_summary()
+
+@app.get("/api/candidates")
+def candidates_geojson(evidence: str = "all"):
+    return get_candidates_geojson(evidence)
+
+@app.get("/api/candidates/filter-summary")
+def candidates_filter_summary(evidence: str = "all"):
+    return get_candidates_filter_summary(evidence)
