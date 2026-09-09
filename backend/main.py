@@ -12,6 +12,17 @@ from backend.services.evidence_service import (
     get_evidence_summary,
 )
 
+from backend.services.spring_service import (
+    get_springs_summary,
+    get_springs_geojson,
+    find_nearest_spring,
+)
+from backend.services.fault_service import (
+    get_faults_summary,
+    get_faults_geojson,
+    find_nearest_fault,
+)
+
 app = FastAPI(
     title="Geotermal API",
     description="API para el sistema de apoyo a la priorización de anomalías superficiales para exploración geotérmica",
@@ -62,3 +73,31 @@ def candidates_geojson(evidence: str = "all"):
 @app.get("/api/candidates/filter-summary")
 def candidates_filter_summary(evidence: str = "all"):
     return get_candidates_filter_summary(evidence)
+
+@app.get("/api/springs/status")
+def springs_status():
+    return get_springs_summary()
+
+
+@app.get("/api/springs")
+def springs_geojson():
+    return get_springs_geojson()
+
+
+@app.get("/api/springs/nearest")
+def nearest_spring(lat: float, lon: float):
+    return find_nearest_spring(lat, lon)
+
+@app.get("/api/faults/status")
+def faults_status():
+    return get_faults_summary()
+
+
+@app.get("/api/faults")
+def faults_geojson():
+    return get_faults_geojson()
+
+
+@app.get("/api/faults/nearest")
+def nearest_fault(lat: float, lon: float):
+    return find_nearest_fault(lat, lon)

@@ -35,6 +35,15 @@ mostrar_candidatos = st.sidebar.checkbox(
     value=False
 )
 
+mostrar_manantiales = st.sidebar.checkbox(
+    "Mostrar manantiales hidrotermales",
+    value=True
+)
+mostrar_fallas = st.sidebar.checkbox(
+    "Mostrar fallas geológicas",
+    value=True
+)
+
 filtro_evidencia = st.sidebar.radio(
     "Filtro de evidencia",
     options=[
@@ -221,6 +230,119 @@ if mostrar_candidatos:
             "No fue posible cargar las zonas candidatas."
         )
         st.exception(error)
+
+# ============================================================
+# MANANTIALES HIDROTERMALES
+# ============================================================
+
+if mostrar_manantiales:
+
+    try:
+        springs_response = requests.get(
+            f"{API_URL}/api/springs",
+            timeout=30
+        )
+
+        springs_response.raise_for_status()
+        springs_geojson = springs_response.json()
+
+        folium.GeoJson(
+            springs_geojson,
+            name="Manantiales hidrotermales SGC",
+
+            marker=folium.CircleMarker(
+                radius=6,
+                color="#117A65",
+                weight=2,
+                fill=True,
+                fill_color="#17A589",
+                fill_opacity=0.9,
+            ),
+
+            tooltip=folium.GeoJsonTooltip(
+                fields=[
+                    "ID_MANANTIAL",
+                    "TEMPERATUR",
+                    "PH_IN_SITU",
+                    "CONDUCTIVIDAD",
+                    "CLASIFICACIÓN",
+                    "ZONA_ESTUDIO",
+                ],
+                aliases=[
+                    "ID manantial:",
+                    "Temperatura:",
+                    "pH:",
+                    "Conductividad:",
+                    "Clasificación:",
+                    "Zona de estudio:",
+                ],
+                localize=True,
+                sticky=True,
+            ),
+        ).add_to(mapa)
+
+    except requests.RequestException as error:
+        st.error(
+            "No fue posible cargar los manantiales hidrotermales."
+        )
+        st.exception(error)
+
+# ============================================================
+# FALLAS GEOLÓGICAS
+# ============================================================
+
+if mostrar_fallas:
+
+    try:
+        faults_response = requests.get(
+            f"{API_URL}/api/faults",
+            timeout=30
+        )
+
+        faults_response.raise_for_status()
+        faults_geojson = faults_response.json()
+
+        folium.GeoJson(
+            faults_geojson,
+            name="Fallas geológicas SGC",
+
+            style_function=lambda feature: {
+                "color": "#2C3E50",
+                "weight": 2.5,
+                "opacity": 0.85,
+            },
+
+            highlight_function=lambda feature: {
+                "weight": 5,
+                "opacity": 1.0,
+            },
+
+            tooltip=folium.GeoJsonTooltip(
+                fields=[
+                    "NOMBRE_FALLA",
+                    "ID_FALLA",
+                    "TIPO",
+                    "EXACTITUD_LOCALIZACION",
+                ],
+                aliases=[
+                    "Falla:",
+                    "ID:",
+                    "Tipo:",
+                    "Exactitud de localización:",
+                ],
+                localize=True,
+                sticky=True,
+            ),
+        ).add_to(mapa)
+
+    except requests.RequestException as error:
+
+        st.error(
+            "No fue posible cargar las fallas geológicas."
+        )
+
+        st.exception(error)
+
 # ============================================================
 # CONTROL DE CAPAS
 # ============================================================
@@ -447,6 +569,162 @@ if resultado_mapa and resultado_mapa.get("last_clicked"):
         )
 
         st.exception(error)
+
+    # ============================================================
+# MANANTIAL MÁS CERCANO
+# ============================================================
+
+    st.subheader("Manantial hidrotermal más cercano")
+
+    try:
+
+      spring_response = requests.get(
+        f"{API_URL}/api/springs/nearest",
+        params={
+            "lat": lat,
+            "lon": lon
+        },
+        timeout=10
+      )
+
+      spring_response.raise_for_status()
+      spring = spring_response.json()
+
+      col1, col2, col3 = st.columns(3)
+
+      with col1:
+        st.metric(
+            "ID manantial",
+            spring["ID_MANANTIAL"]
+        )
+
+      with col2:
+        st.metric(
+            "Distancia",
+            f"{spring['distance_m']:.1f} m"
+        )
+
+      with col3:
+        if spring["temperatura"] is not None:
+            st.metric(
+                "Temperatura",
+                f"{spring['temperatura']:.1f} °C"
+            )
+        else:
+            st.metric(
+                "Temperatura",
+                "Sin dato"
+            )
+
+      st.write(
+        f"**Coordenadas:** "
+        f"{spring['latitude']:.6f}, "
+        f"{spring['longitude']:.6f}"
+      )
+
+      if spring["ph"] is not None:
+        st.write(
+            f"**pH:** {spring['ph']:.2f}"
+         )
+
+      if spring["conductividad"] is not None:
+        st.write(
+            f"**Conductividad:** "
+            f"{spring['conductividad']:.2f}"
+         )
+
+      if spring["clasificacion"]:
+        st.write(
+            f"**Clasificación:** "
+            f"{spring['clasificacion']}"
+         )
+
+      if spring["zona_estudio"]:
+        st.write(
+            f"**Zona de estudio:** "
+            f"{spring['zona_estudio']}"
+         )
+
+    except requests.RequestException as error:
+
+      st.error(
+        "No fue posible consultar el manantial "
+        "hidrotermal más cercano."
+       )
+
+      st.exception(error)
+
+
+    # ============================================================
+# FALLA GEOLÓGICA MÁS CERCANA
+# ============================================================
+
+    st.subheader("Falla geológica más cercana")
+
+    try:
+      fault_response = requests.get(
+        f"{API_URL}/api/faults/nearest",
+        params={
+            "lat": lat,
+            "lon": lon,
+        },
+        timeout=10,
+      )
+
+      fault_response.raise_for_status()
+      fault = fault_response.json()
+
+      col1, col2, col3 = st.columns(3)
+
+      with col1:
+        st.metric(
+            "Falla",
+            fault["nombre_falla"]
+            if fault["nombre_falla"]
+            else "Sin nombre",
+        )
+
+      with col2:
+        st.metric(
+            "Distancia",
+            f"{fault['distance_m']:.2f} m",
+        )
+
+      with col3:
+        st.metric(
+            "OBJECTID",
+            fault["OBJECTID"],
+        )
+
+      st.write(
+        "**ID de falla:**",
+        fault["ID_FALLA"]
+        if fault["ID_FALLA"] and fault["ID_FALLA"].strip()
+        else "Sin dato",
+      )
+
+      st.write(
+        "**Tipo:**",
+        fault["tipo"]
+        if fault["tipo"]
+        else "Sin dato",
+      )
+
+      st.write(
+        "**Exactitud de localización:**",
+        fault["exactitud_localizacion"]
+        if fault["exactitud_localizacion"]
+        else "Sin dato",
+      )
+
+    except requests.RequestException as error:
+
+      st.error(
+        "No fue posible consultar la falla geológica más cercana."
+      )
+
+      st.exception(error)
+
 
     col1, col2 = st.columns(2)
 
